@@ -18,16 +18,16 @@ def traverse_nodes(node, all_text):
         if tag in ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']:
             header_level = int(tag[1])
             prefix = '#' * header_level
-            all_text += f"{prefix} {node.get_text(strip=True)}\n"
+            all_text += f"{prefix} {node.get_text(strip=False)}\n"
         
         elif tag in ['pre']:
             all_text += f"```\n{node.get_text(strip=False).replace('Copy code', new_line)}\n```\n"
         
         elif tag in ['p']:
-            all_text += f"{node.get_text(strip=True)}\n"
+            all_text += f"{node.get_text(strip=False)}\n"
         
         elif tag in ['div'] and 'empty:hidden' in node.get('class', []):
-            all_text += f"\n___\n# User\n{node.get_text(strip=True)}\n___\n# ChatGPT\n"
+            all_text += f"\n___\n# User\n{node.get_text(strip=False)}\n___\n# ChatGPT\n"
         
         for child in node.children:
             all_text = traverse_nodes(child, all_text)
