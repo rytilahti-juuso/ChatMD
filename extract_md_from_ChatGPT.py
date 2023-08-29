@@ -30,7 +30,7 @@ def traverse_nodes(node, all_text):
             all_text += f"{prefix} {node.get_text(strip=False)}\n"
         
         elif tag in ['pre']:
-            all_text += f"```\n{node.get_text(strip=False).replace('Copy code', new_line)}\n```\n"
+            all_text += f"```{node.get_text(strip=False).replace('Copy code', new_line)}\n```\n"
         
         elif tag in ['p']:
             all_text += f"{node.get_text(strip=False)}\n"
