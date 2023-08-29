@@ -1,6 +1,15 @@
 import requests
 from bs4 import BeautifulSoup
 
+
+def write_to_file(file_path, content):
+    try:
+        with open(file_path, 'w') as file:
+            file.write(content)
+        print("Successfully wrote to the file.")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
 def fetch_url(url):
     try:
         response = requests.get(url)
@@ -47,6 +56,10 @@ if html_string:
     if main_content:
         all_text = ''
         all_text = traverse_nodes(main_content, all_text)
+        write_to_file("./output.md", all_text)
+        print("  ")
+        print(" Below is the MD output printed to console! ")
+        print("  ")
         print(all_text)
     else:
         print("No elements were found. ChatGPT UI has probably been updated. Please update the code to parse through correct elements.")
