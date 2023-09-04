@@ -22,7 +22,7 @@
                     all_text += '```' + node.textContent.trim().replace("Copy code", "\n") + '\n ```\n';
                 } 
                 else if(['p'].includes(tag)){
-                    all_text += node.textContent.trim() + '\n';
+                    all_text += node.textContent.trim() + '\n\n';
                 }
                 // is user's prompt
                 else if(['div'].includes(tag) && node.className === "empty:hidden"){

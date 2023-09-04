@@ -44,7 +44,7 @@ def traverse_nodes(node, all_text):
         
         # If it's a paragraph, simply add its text
         elif tag in ['p']:
-            all_text += f"{node.get_text(strip=False)}\n"
+            all_text += f"{node.get_text(strip=False)}\n\n"
 
         # User text is always with set with with class "empty:hidden"
         elif tag in ['div'] and 'empty:hidden' in node.get('class', []):
