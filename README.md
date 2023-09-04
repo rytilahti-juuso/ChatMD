@@ -1,5 +1,5 @@
 # ChatMD
-Convert ChatGPT to Markdown (.md) while preserving syntax (e.g. code formatting). Done in Javascript and Python. The majority of the Python script was done by converting the script written in Javascript with ChatGPT to Python.
+Convert ChatGPT chats to Markdown (.md) while preserving most of the syntax (e.g. code formatting). Done in Javascript and Python. The majority of the Python script was done by converting the script written in Javascript with ChatGPT to Python.
 
 ## Javascript
 1. Navigate to the shared chat url.
