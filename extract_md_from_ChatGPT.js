@@ -1,6 +1,6 @@
 {
     // Adjust this selector to match your page's main content/container
-    let mainContent = document.getElementsByClassName('v-slot-main-content')[0];
+    let mainContent = document.getElementsByClassName('main')[0];
 
     if (mainContent) {
         let all_text = '';
@@ -44,7 +44,7 @@
          */
         function parseInlineNodes(parentNode) {
             let textBuffer = '';
-
+        
             parentNode.childNodes.forEach(child => {
                 if (child.nodeType === Node.TEXT_NODE) {
                     // Plain text
@@ -52,31 +52,42 @@
                 } 
                 else if (child.nodeType === Node.ELEMENT_NODE) {
                     let tag = child.tagName.toLowerCase();
-
+        
                     if (tag === 'a') {
                         // Convert <a href="...">...</a> to [text](href)
                         let href = child.getAttribute('href') || '';
-                        // Recursively parse the inside of the link in case it has strong/em/etc.
-                        let linkText = parseInlineNodes(child).trim();
+                        let linkText = parseInlineNodes(child);
                         textBuffer += `[${linkText}](${href})`;
                     } 
                     else if (tag === 'strong' || tag === 'b') {
-                        // Convert <strong>/<b> to **...**
-                        let strongText = parseInlineNodes(child).trim();
-                        textBuffer += `**${strongText}**`;
+                        // Convert <strong>/<b> to **...** but preserve leading/trailing whitespace
+                        let strongText = parseInlineNodes(child);
+        
+                        // Capture leading and trailing whitespace
+                        let leading = strongText.match(/^(\s+)/) ? strongText.match(/^(\s+)/)[0] : '';
+                        let trailing = strongText.match(/(\s+)$/) ? strongText.match(/(\s+)$/)[0] : '';
+        
+                        // Trim content so that ** markers are recognized properly
+                        let content = strongText.trim();
+                        textBuffer += `${leading}**${content}**${trailing}`;
                     } 
                     else if (tag === 'em' || tag === 'i') {
-                        // Convert <em>/<i> to *...*
-                        let emText = parseInlineNodes(child).trim();
-                        textBuffer += `*${emText}*`;
-                    }
+                        // Convert <em>/<i> to *...* but preserve leading/trailing whitespace
+                        let emText = parseInlineNodes(child);
+        
+                        let leading = emText.match(/^(\s+)/) ? emText.match(/^(\s+)/)[0] : '';
+                        let trailing = emText.match(/(\s+)$/) ? emText.match(/(\s+)$/)[0] : '';
+        
+                        let content = emText.trim();
+                        textBuffer += `${leading}*${content}*${trailing}`;
+                    } 
                     else {
                         // For any other inline element, recurse to gather text
                         textBuffer += parseInlineNodes(child);
                     }
                 }
             });
-
+        
             return textBuffer;
         }
 
@@ -222,5 +233,5 @@
         console.log(all_text);
     } else {
         console.log('No element with class "v-slot-main-content" found.');
-    }
+}
 }
