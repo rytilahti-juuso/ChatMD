@@ -222,16 +222,36 @@
                     currentRowCells.push(textContent);
                 }
 
-                // For any other element we haven't explicitly handled, just recurse its children
+                // -- DIV WITH SPECIFIC STYLE (CODE BLOCK) --
+                else if (tag === 'div') {
+                    let styleAttr = node.getAttribute('style') || '';
+                    if (
+                        styleAttr.includes('background:#eeeeee') &&
+                        styleAttr.includes('border:1px solid #cccccc') &&
+                        styleAttr.includes('padding:5px 10px')
+                    ) {
+                        // All text content as a code block without a language spec
+                        let codeText = node.textContent.trim();
+                        all_text += '```\n' + codeText + '\n```\n\n';
+                    } else {
+                        // If not the style we want, just recurse
+                        Array.from(node.childNodes).forEach(traverseNodes);
+                    }
+                }
+
+                // For any other element we haven't explicitly handled, recurse
                 else {
                     Array.from(node.childNodes).forEach(traverseNodes);
                 }
             }
         }
 
+        // Start traversing from the main content element
         traverseNodes(mainContent);
+
+        // Finally, log the collected text
         console.log(all_text);
     } else {
         console.log('No element with class "v-slot-main-content" found.');
-}
+    }
 }
