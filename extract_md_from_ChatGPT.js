@@ -1,7 +1,6 @@
-// Run the below code in the console on the page you want to scrape Markdown from
 {
     // Adjust this selector to match your page's main content/container
-    let mainContent = document.getElementsByClassName('main')[0];
+    let mainContent = document.getElementsByClassName('v-slot-main-content')[0];
 
     if (mainContent) {
         let all_text = '';
@@ -36,6 +35,51 @@
             all_text += '| ' + separatorCells.join(' | ') + ' |\n';
         }
 
+        /**
+         * Recursively parses inline child nodes into a single string.
+         * - Converts links <a href="...">link text</a> into [link text](...)
+         * - Converts <strong>/<b> to **...**
+         * - Converts <em>/<i> to *...*
+         * - Recursively handles nested elements.
+         */
+        function parseInlineNodes(parentNode) {
+            let textBuffer = '';
+
+            parentNode.childNodes.forEach(child => {
+                if (child.nodeType === Node.TEXT_NODE) {
+                    // Plain text
+                    textBuffer += child.textContent;
+                } 
+                else if (child.nodeType === Node.ELEMENT_NODE) {
+                    let tag = child.tagName.toLowerCase();
+
+                    if (tag === 'a') {
+                        // Convert <a href="...">...</a> to [text](href)
+                        let href = child.getAttribute('href') || '';
+                        // Recursively parse the inside of the link in case it has strong/em/etc.
+                        let linkText = parseInlineNodes(child).trim();
+                        textBuffer += `[${linkText}](${href})`;
+                    } 
+                    else if (tag === 'strong' || tag === 'b') {
+                        // Convert <strong>/<b> to **...**
+                        let strongText = parseInlineNodes(child).trim();
+                        textBuffer += `**${strongText}**`;
+                    } 
+                    else if (tag === 'em' || tag === 'i') {
+                        // Convert <em>/<i> to *...*
+                        let emText = parseInlineNodes(child).trim();
+                        textBuffer += `*${emText}*`;
+                    }
+                    else {
+                        // For any other inline element, recurse to gather text
+                        textBuffer += parseInlineNodes(child);
+                    }
+                }
+            });
+
+            return textBuffer;
+        }
+
         // Recursive function to traverse child nodes
         function traverseNodes(node) {
             if (node.nodeType === Node.ELEMENT_NODE) {
@@ -66,11 +110,13 @@
                     if (parentTag !== 'li') {
                         // Also skip if we are inside a table cell (because we handle the entire cell at once)
                         if (!inTable) {
-                            all_text += node.textContent.trim() + '\n\n';
+                            // Use parseInlineNodes to preserve inline tags like <a>, <strong>, <em>, etc.
+                            let pContent = parseInlineNodes(node).trim();
+                            if (pContent.length > 0) {
+                                all_text += pContent + '\n\n';
+                            }
                         }
                     }
-                    // Recurse over children for any nested elements
-                    Array.from(node.childNodes).forEach(traverseNodes);
                 }
 
                 // -- LIST ITEMS (WITH INDENTATION + ORDERED LIST SUPPORT) --
@@ -93,14 +139,15 @@
                         ? node.parentElement.tagName.toLowerCase()
                         : '';
 
+                    // Convert list item content (including possible <a>/<strong>/<em> inline elements)
+                    let liContent = parseInlineNodes(node).trim();
+
                     if (parentTag === 'ol') {
                         // Markdown auto-numbers if each item is "1."
-                        all_text += `${indentation}1. ${node.textContent.trim()}\n`;
+                        all_text += `${indentation}1. ${liContent}\n`;
                     } else {
-                        all_text += `${indentation}- ${node.textContent.trim()}\n`;
+                        all_text += `${indentation}- ${liContent}\n`;
                     }
-                    // Recurse children if needed
-                    Array.from(node.childNodes).forEach(traverseNodes);
                 }
 
                 // -- TABLE HANDLING START --
