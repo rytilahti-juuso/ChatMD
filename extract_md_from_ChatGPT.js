@@ -1,7 +1,7 @@
 // Run the below code in the console on the page you want to scrape Markdown from
 {
     // Adjust this selector to match your page's main content/container
-    let mainContent = document.getElementsByTagName('main')[0]
+    let mainContent = document.getElementsByClassName('main')[0];
 
     if (mainContent) {
         let all_text = '';
@@ -48,6 +48,7 @@
                     all_text += prefix + ' ' + node.textContent.trim() + '\n\n';
                 }
 
+                // If you have a special class you want to capture as normal text:
                 else if (node.classList && [...node.classList].some(cls => cls.includes("user-chat-width"))) {
                     all_text += node.textContent.trim() + '\n\n';
                 }
@@ -60,7 +61,16 @@
 
                 // -- PARAGRAPHS --
                 else if (tag === 'p') {
-                    all_text += node.textContent.trim() + '\n\n';
+                    // Skip <p> if its direct parent is an <li>, to prevent duplicate text in lists
+                    let parentTag = node.parentElement?.tagName?.toLowerCase();
+                    if (parentTag !== 'li') {
+                        // Also skip if we are inside a table cell (because we handle the entire cell at once)
+                        if (!inTable) {
+                            all_text += node.textContent.trim() + '\n\n';
+                        }
+                    }
+                    // Recurse over children for any nested elements
+                    Array.from(node.childNodes).forEach(traverseNodes);
                 }
 
                 // -- LIST ITEMS (WITH INDENTATION + ORDERED LIST SUPPORT) --
@@ -89,50 +99,48 @@
                     } else {
                         all_text += `${indentation}- ${node.textContent.trim()}\n`;
                     }
+                    // Recurse children if needed
+                    Array.from(node.childNodes).forEach(traverseNodes);
                 }
 
                 // -- TABLE HANDLING START --
                 else if (tag === 'table') {
                     inTable = true;
                     all_text += '\n';  // Blank line before a table
+                    // Recurse over children
+                    Array.from(node.childNodes).forEach(traverseNodes);
+                    // After finishing the table
+                    flushCurrentRow();
+                    inTable = false;
+                    inThead = false;
+                    tableHeaderCount = 0;
+                    hasHeaderRow = false;
+                    currentRowCells = [];
+                    all_text += '\n';  // Blank line after table
                 }
+
                 else if (tag === 'thead') {
                     inThead = true;
-                    hasHeaderRow = false;
+                    // Recurse children
+                    Array.from(node.childNodes).forEach(traverseNodes);
+                    inThead = false; // done with thead
                 }
+
                 else if (tag === 'tbody') {
-                    inThead = false;
+                    // Recurse children
+                    Array.from(node.childNodes).forEach(traverseNodes);
                 }
+
                 else if (tag === 'tr' && inTable) {
-                    // Flush any leftover row data *before* starting a new row
+                    // Before processing this <tr>, flush any leftover row data from the previous one
                     flushCurrentRow();
-                }
-                else if (tag === 'th' && inTable) {
-                    hasHeaderRow = true;  // We know this <tr> is a header row
-                    currentRowCells.push(node.textContent.trim());
-                }
-                else if (tag === 'td' && inTable) {
-                    currentRowCells.push(node.textContent.trim());
-                }
-
-                // Example: capturing code blocks in certain <div> with a background color
-                else if (tag === 'div') {
-                    if (!node.className && getComputedStyle(node).backgroundColor === 'rgb(238, 238, 238)') {
-                        all_text += '```java\n' + node.textContent.trim() + '\n```\n\n';
-                    }
-                }
-
-                // -- RECURSE over children --
-                Array.from(node.childNodes).forEach(traverseNodes);
-
-                // -- POST-ORDER LOGIC --
-                if (tag === 'tr' && inTable) {
-                    // We’ve now captured the row's cells in currentRowCells
-                    // Store length before flushing, because flushCurrentRow() clears the array
+                    // Recurse so we can capture <th> or <td> inside
+                    Array.from(node.childNodes).forEach(traverseNodes);
+                    // Now flush the row we just built
                     let rowLength = currentRowCells.length;
                     flushCurrentRow();
 
-                    // If it was a header row and we haven't inserted the separator yet:
+                    // If it was a header row and we haven't inserted the separator yet
                     if (hasHeaderRow && !tableHeaderCount) {
                         tableHeaderCount = rowLength;
                         if (tableHeaderCount > 0) {
@@ -140,16 +148,25 @@
                         }
                     }
                 }
-                else if (tag === 'table') {
-                    // Once we finish the table, flush any last row
-                    flushCurrentRow();
-                    // Reset table state
-                    inTable = false;
-                    inThead = false;
-                    tableHeaderCount = 0;
-                    hasHeaderRow = false;
-                    currentRowCells = [];
-                    all_text += '\n';  // Blank line after table
+
+                // -- HEADERS IN TABLE --
+                else if (tag === 'th' && inTable) {
+                    hasHeaderRow = true;
+                    // Collect textContent from <th> (including any children)
+                    let textContent = node.textContent.trim().replace(/\s+/g, ' ');
+                    currentRowCells.push(textContent);
+                }
+
+                // -- CELLS IN TABLE --
+                else if (tag === 'td' && inTable) {
+                    // Collect textContent from <td> (including children)
+                    let textContent = node.textContent.trim().replace(/\s+/g, ' ');
+                    currentRowCells.push(textContent);
+                }
+
+                // For any other element we haven't explicitly handled, just recurse its children
+                else {
+                    Array.from(node.childNodes).forEach(traverseNodes);
                 }
             }
         }
@@ -158,6 +175,5 @@
         console.log(all_text);
     } else {
         console.log('No element with class "v-slot-main-content" found.');
-
     }
 }
